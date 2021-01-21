@@ -56,12 +56,7 @@ func (r *repository) Rollback() error {
 }
 
 func (r *repository) Get(id int) (*Entity, error) {
-	var q *gorm.DB
-	if r.tx != nil {
-		q = r.tx
-	} else {
-		q = r.db
-	}
+	q := r.startQuery()
 
 	var e Entity
 	err := q.Model(&Entity{}).Where("id = ?", id).First(&e).Error
@@ -72,12 +67,7 @@ func (r *repository) Get(id int) (*Entity, error) {
 }
 
 func (r *repository) Create(entity Entity) (*Entity, error) {
-	var q *gorm.DB
-	if r.tx != nil {
-		q = r.tx
-	} else {
-		q = r.db
-	}
+	q := r.startQuery()
 
 	err := q.Model(&Entity{}).Create(&entity).Error
 	if err != nil {
@@ -87,18 +77,20 @@ func (r *repository) Create(entity Entity) (*Entity, error) {
 }
 
 func (r *repository) Update(id int, entity Entity) (*Entity, error) {
-	var q *gorm.DB
-	if r.tx != nil {
-		q = r.tx
-	} else {
-		q = r.db
-	}
+	q := r.startQuery()
 
-	err := q.Model(&Entity{}).Where("id = ?", id).Save(&entity).Error
+	err := q.Where("id = ?", id).Save(&entity).Error
 	if err != nil {
 		return nil, err
 	}
 	return &entity, nil
+}
+
+func (r *repository) startQuery() *gorm.DB {
+	if r.tx != nil {
+		return r.tx.Model(&Entity{})
+	}
+	return r.db.Model(&Entity{})
 }
 
 func NewSQLRepository(db *gorm.DB) Repository {
